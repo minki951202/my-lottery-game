@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제비뽑기 게임</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+        }
+
+        #sidebar {
+            width: 250px;
+            text-align: left;
+            margin-right: 20px;
+        }
+
+        #sidebar h3 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        .result-item {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+
+        #mainContainer {
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 20px;
+            color: #333;
+        }
+
+        #inputContainer {
+            margin: 20px;
+        }
+
+        .nameInput {
+            margin: 5px;
+            padding: 10px;
+            font-size: 14px;
+            width: 150px;
+        }
+
+        #lotteryMachine {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            border: 2px solid #ccc;
+            border-radius: 0%;
+            background-image: url('/image.png'); /* 이미지 경로 */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .ball {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #FFCC00;
+            color: #333;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            font-size: 16px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.5);
+            animation: dropBall 1.5s ease-out forwards;
+        }
+
+        @keyframes dropBall {
+            0% {
+                top: 0;
+                transform: translateX(-50%) scale(0.5);
+            }
+            100% {
+                top: 80%;
+                transform: translateX(-50%) scale(3);
+            }
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #currentPlayer {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- 왼쪽 결과 나열 -->
+    <div id="sidebar">
+        <h3>뽑은 결과</h3>
+        <div id="sidebarResults"></div>
+    </div>
+
+    <!-- 메인 영역 -->
+    <div id="mainContainer">
+        <h1>제비뽑기 게임</h1>
+
+        <div id="inputContainer">
+            <p>이름을 입력하세요 (20명):</p>
+            <div id="nameInputs"></div>
+        </div>
+
+        <button id="prepareButton">제비뽑기 준비!</button>
+        <button id="drawButton" disabled>공 뽑기</button>
+        <div id="currentPlayer"></div>
+        <div id="lotteryMachine"></div>
+    </div>
+
+    <script>
+    const nameInputs = document.getElementById('nameInputs');
+    const drawButton = document.getElementById('drawButton');
+    const prepareButton = document.getElementById('prepareButton');
+    const lotteryMachine = document.getElementById('lotteryMachine');
+    const sidebarResults = document.getElementById('sidebarResults');
+    const currentPlayerDiv = document.getElementById('currentPlayer');
+
+    const names = [];
+    const numbers = [];
+    const specialNumbers = [14, 17, 19]; // 12번 추첨자가 뽑을 번호
+    let currentIndex = 0;
+
+    let currentBall = null;
+
+    // 이름 입력 필드 생성
+    function createNameInputs() {
+        for (let i = 0; i < 20; i++) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = `이름 ${i + 1}`;
+            input.className = 'nameInput';
+            input.id = `name-${i}`;
+            nameInputs.appendChild(input);
+        }
+    }
+
+    // 공 애니메이션 그리기
+    function drawBall(number) {
+        if (currentBall) {
+            currentBall.remove();
+        }
+
+        const ball = document.createElement('div');
+        ball.className = 'ball';
+        ball.textContent = number;
+        lotteryMachine.appendChild(ball);
+        currentBall = ball;
+    }
+
+    // 결과를 왼쪽에 추가
+    function addToSidebar(name, number) {
+        const resultItem = document.createElement('div');
+        resultItem.className = 'result-item';
+        resultItem.textContent = `${name} → ${number}`;
+        sidebarResults.appendChild(resultItem);
+    }
+
+    // 공 하나씩 뽑기
+    function drawNextBall() {
+        if (currentIndex >= names.length) {
+            alert("모든 공을 다 뽑았습니다!");
+            currentPlayerDiv.textContent = ''; // 현재 플레이어 초기화
+            drawButton.disabled = true;
+            return;
+        }
+
+        const name = names[currentIndex];
+        let number;
+
+        if (currentIndex === 11) { // 12번 추첨자
+            const availableSpecialNumbers = specialNumbers.filter(num => numbers.includes(num)); // 남아 있는 번호만 확인
+            if (availableSpecialNumbers.length > 0) {
+                number = availableSpecialNumbers[0]; // 첫 번째 값을 선택
+                numbers.splice(numbers.indexOf(number), 1); // 해당 번호 제거
+            } else {
+                alert("specialNumbers에서 선택할 번호가 없습니다. 기본 랜덤 추첨으로 진행합니다.");
+                number = numbers.pop(); // 일반 랜덤 추첨
+            }
+        } else {
+            number = numbers.pop();
+        }
+
+        currentPlayerDiv.textContent = `현재 뽑는 사람: ${name}`;
+        drawBall(number);
+        addToSidebar(name, number);
+        currentIndex++;
+    }
+
+    // 제비뽑기 시작 준비
+    function prepareLottery() {
+        const allNames = Array.from({ length: 20 }, (_, i) => {
+            const input = document.getElementById(`name-${i}`);
+            return input.value.trim() || `이름 ${i + 1}`;
+        });
+
+        names.length = 0;
+        names.push(...allNames);
+
+        numbers.length = 0;
+        numbers.push(...Array.from({ length: 20 }, (_, i) => i + 1));
+        shuffle(numbers);
+
+        sidebarResults.innerHTML = '';
+        currentPlayerDiv.textContent = '';
+        currentIndex = 0;
+        drawButton.disabled = false; // 공 뽑기 버튼 활성화
+    }
+
+    // 배열 섞기
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // 초기화
+    createNameInputs();
+    drawButton.disabled = true;
+
+    prepareButton.addEventListener('click', prepareLottery);
+    drawButton.addEventListener('click', drawNextBall);
+</script>
+
+</body>
+</html>
