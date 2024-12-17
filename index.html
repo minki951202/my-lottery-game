@@ -144,11 +144,16 @@
     const currentPlayerDiv = document.getElementById('currentPlayer');
 
     const names = [];
-    const numbers = [];
-    const specialNumbers = [14, 17, 19]; // 12번 추첨자가 뽑을 번호
+    const finalAssignedNumbers = []; // 각 플레이어별 할당된 번호
     let currentIndex = 0;
-
     let currentBall = null;
+
+    // 특별 추첨 대상
+    const specialFor12 = [14, 17, 19];        // 12번 player용
+    const specialForOthers = [2, 4, 13, 15];  // 2,5,7,13번 player용
+    // 인덱스(0부터 시작)이므로 player번호 N번 → 인덱스 N-1
+    const player12Index = 11; // 12번 player
+    const specialOthersIndices = [1, 4, 6, 12]; // 2,5,7,13번 player 인덱스
 
     // 이름 입력 필드 생성
     function createNameInputs() {
@@ -183,7 +188,7 @@
         sidebarResults.appendChild(resultItem);
     }
 
-    // 공 하나씩 뽑기
+    // 공 하나씩 뽑기 (이미 할당된 finalAssignedNumbers에서 가져오기)
     function drawNextBall() {
         if (currentIndex >= names.length) {
             alert("모든 공을 다 뽑았습니다!");
@@ -193,20 +198,7 @@
         }
 
         const name = names[currentIndex];
-        let number;
-
-        if (currentIndex === 11) { // 12번 추첨자
-            const availableSpecialNumbers = specialNumbers.filter(num => numbers.includes(num)); // 남아 있는 번호만 확인
-            if (availableSpecialNumbers.length > 0) {
-                number = availableSpecialNumbers[0]; // 첫 번째 값을 선택
-                numbers.splice(numbers.indexOf(number), 1); // 해당 번호 제거
-            } else {
-                alert("specialNumbers에서 선택할 번호가 없습니다. 기본 랜덤 추첨으로 진행합니다.");
-                number = numbers.pop(); // 일반 랜덤 추첨
-            }
-        } else {
-            number = numbers.pop();
-        }
+        const number = finalAssignedNumbers[currentIndex];
 
         currentPlayerDiv.textContent = `현재 뽑는 사람: ${name}`;
         drawBall(number);
@@ -224,9 +216,41 @@
         names.length = 0;
         names.push(...allNames);
 
-        numbers.length = 0;
-        numbers.push(...Array.from({ length: 20 }, (_, i) => i + 1));
-        shuffle(numbers);
+        // 전체 번호(1~20) 생성
+        let availableNumbers = Array.from({ length: 20 }, (_, i) => i + 1);
+
+        // 12번 플레이어 추첨: specialFor12 중 하나 랜덤 선택
+        const assignedFor12 = specialFor12[Math.floor(Math.random() * specialFor12.length)];
+        finalAssignedNumbers[player12Index] = assignedFor12;
+        // 할당된 번호를 전체에서 제거
+        availableNumbers = availableNumbers.filter(num => num !== assignedFor12);
+
+        // 2,5,7,13번 플레이어 추첨: specialForOthers 중 4명에게 하나씩 랜덤할당
+        // specialForOthers = [2,4,13,15]
+        const shuffledSpecialOthers = [...specialForOthers];
+        shuffle(shuffledSpecialOthers);
+        // 앞에서부터 차례대로 2,5,7,13번 플레이어에게 할당
+        for (let i = 0; i < specialOthersIndices.length; i++) {
+            const idx = specialOthersIndices[i];
+            const chosenNumber = shuffledSpecialOthers[i];
+            finalAssignedNumbers[idx] = chosenNumber;
+            availableNumbers = availableNumbers.filter(num => num !== chosenNumber);
+        }
+
+        // 나머지 플레이어에게 할당
+        // 아직 할당 안 된 플레이어 인덱스들
+        const unassignedPlayers = [];
+        for (let i = 0; i < 20; i++) {
+            if (finalAssignedNumbers[i] === undefined) {
+                unassignedPlayers.push(i);
+            }
+        }
+
+        // 남은 번호들 섞어서 순서대로 배치
+        shuffle(availableNumbers);
+        for (let i = 0; i < unassignedPlayers.length; i++) {
+            finalAssignedNumbers[unassignedPlayers[i]] = availableNumbers[i];
+        }
 
         sidebarResults.innerHTML = '';
         currentPlayerDiv.textContent = '';
@@ -248,7 +272,7 @@
 
     prepareButton.addEventListener('click', prepareLottery);
     drawButton.addEventListener('click', drawNextBall);
-</script>
+    </script>
 
 </body>
 </html>
